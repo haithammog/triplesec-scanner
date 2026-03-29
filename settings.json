@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/update-architecture.js",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -f $CLAUDE_PROJECT_DIR/ARCHITECTURE.md ] && echo '{\"additionalContext\": \"'$(cat $CLAUDE_PROJECT_DIR/ARCHITECTURE.md | head -160 | python3 -c \"import sys,json; print(json.dumps(sys.stdin.read()))\")'\"}' || echo '{}'"
+          }
+        ]
+      }
+    ]
+  }
+}
