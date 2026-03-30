@@ -69,7 +69,6 @@ REQUIRED_CONFIG_KEYS = [
     ("flask", "host"),
     ("flask", "port"),
     ("flask", "version"),
-    ("webhook", "url"),
     ("filters", "cvss_min_score"),
     ("filters", "epss_min_score"),
     ("filters", "patch_cache_ttl"),
@@ -1351,8 +1350,7 @@ def generate_pdf_report(
 # Webhook
 # ---------------------------------------------------------------------------
 
-def post_webhook(payload: dict, cfg: dict) -> None:
-    url = cfg["webhook"]["url"]
+def post_webhook(payload: dict, url: str) -> None:
     try:
         resp = requests.post(url, json=payload, timeout=30)
         resp.raise_for_status()
@@ -1373,6 +1371,7 @@ def run_scan(
     network: str,
     email: str,
     cfg: dict,
+    webhook_url: str,
     output_base: Optional[Path] = None,
     no_patch_check: bool = False,
     no_applicability_check: bool = False,
@@ -1529,7 +1528,7 @@ def run_scan(
             ),
         }
 
-    post_webhook(payload, cfg)
+    post_webhook(payload, webhook_url)
 
     if verbose:
         print(
@@ -1563,20 +1562,21 @@ def create_flask_app(cfg: dict) -> Flask:
 
     @flask_app.route("/scan", methods=["POST"])
     def scan():
-        data    = request.get_json(force=True, silent=True) or {}
-        network = data.get("network")
-        email   = data.get("email")
+        data        = request.get_json(force=True, silent=True) or {}
+        network     = data.get("network")
+        email       = data.get("email")
+        webhook_url = data.get("webhook_url")
 
-        if not network or not email:
-            return jsonify({"error": "Missing required fields: network, email"}), 400
+        if not network or not email or not webhook_url:
+            return jsonify({"error": "Missing required fields: network, email, webhook_url"}), 400
 
         if not re.match(r"^\d{1,3}(?:\.\d{1,3}){3}/\d{1,2}$", network):
             return jsonify({"error": f"Invalid network CIDR: {network!r}"}), 400
 
-        no_patch_check        = bool(data.get("no_patch_check", False))
+        no_patch_check         = bool(data.get("no_patch_check", False))
         no_applicability_check = bool(data.get("no_applicability_check", False))
-        unversioned           = data.get("unversioned") or None
-        verbose               = bool(data.get("verbose", False))
+        unversioned            = data.get("unversioned") or None
+        verbose                = bool(data.get("verbose", False))
 
         if unversioned and unversioned not in ("include_flagged", "exclude"):
             return jsonify({"error": f"Invalid unversioned value: {unversioned!r}"}), 400
@@ -1585,6 +1585,7 @@ def create_flask_app(cfg: dict) -> Flask:
             try:
                 run_scan(
                     network=network, email=email, cfg=cfg,
+                    webhook_url=webhook_url,
                     no_patch_check=no_patch_check,
                     no_applicability_check=no_applicability_check,
                     unversioned_override=unversioned,
@@ -1598,10 +1599,7 @@ def create_flask_app(cfg: dict) -> Flask:
         return jsonify({
             "status":  "accepted",
             "scan_id": _make_scan_id(network),
-            "message": (
-                f"Scan started for {network}. "
-                "Results will be POSTed to the configured webhook on completion."
-            ),
+            "message": f"Scan started for {network}. Results will be POSTed to {webhook_url} on completion.",
         }), 202
 
     return flask_app
@@ -1625,6 +1623,8 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Path to config TOML file.")
     p.add_argument("--output", metavar="PATH",
                    help="Override scan output base directory.")
+    p.add_argument("--webhook-url", metavar="URL", required=False,
+                   help="URL to POST scan results to on completion.")
     p.add_argument("--no-patch-check", action="store_true",
                    help="Skip OS patch status lookup (Filter 3).")
     p.add_argument("--no-applicability-check", action="store_true",
@@ -1661,6 +1661,8 @@ def main() -> None:
         # CLI mode
         if not args.email:
             parser.error("email argument is required in CLI mode")
+        if not args.webhook_url:
+            parser.error("--webhook-url is required in CLI mode")
 
         unversioned_override = None
         if args.unversioned == "include":
@@ -1675,6 +1677,7 @@ def main() -> None:
                 network=args.network,
                 email=args.email,
                 cfg=cfg,
+                webhook_url=args.webhook_url,
                 output_base=output_base,
                 no_patch_check=args.no_patch_check,
                 no_applicability_check=args.no_applicability_check,

@@ -60,16 +60,6 @@ version = "3"
 
 
 # -----------------------------------------------------------------------------
-# [webhook] — n8n webhook integration
-# The scanner POSTs scan results here on completion. n8n reads the payload,
-# attaches report files, and sends the email. The scanner never sends email.
-# -----------------------------------------------------------------------------
-[webhook]
-
-url = "http://localhost:5678/webhook/vuln-scanner"
-
-
-# -----------------------------------------------------------------------------
 # [filters] — Post-processing filter thresholds
 # Applied in order to every CVE discovered by nmap.
 # A CVE must pass all active filters to appear in the actionable report.

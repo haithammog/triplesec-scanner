@@ -48,7 +48,7 @@ sudo chmod +x /usr/local/bin/vuln-scanner.py
 sudo mkdir -p /etc/triplesec
 sudo cp config.toml /etc/triplesec/config.toml
 
-# 6. Edit the config — at minimum set webhook.url
+# 6. Review and edit the config as needed
 sudo nano /etc/triplesec/config.toml
 
 # 7. Install and start the systemd service
@@ -80,7 +80,6 @@ All keys are validated at startup. The scanner exits immediately if anything is 
 |---|---|
 | `[paths]` | Filesystem locations: output dir, cache dirs, log, nmap binary/script |
 | `[flask]` | Host, port, version string for service mode |
-| `[webhook]` | n8n webhook URL |
 | `[filters]` | CVSS min score, EPSS min score, patch cache TTL, unversioned CVE handling |
 | `[nmap]` | Full command template with `{nmap_binary}`, `{script}`, `{target}` placeholders |
 | `[apis]` | URL templates for NVD, EPSS, Ubuntu, Debian, Red Hat, MSRC |
@@ -120,6 +119,7 @@ POST /scan
 {
   "network":                "91.221.69.0/24",
   "email":                  "recipient@example.com",
+  "webhook_url":            "http://n8n-host:5678/webhook/vuln-scanner",
   "no_patch_check":         false,
   "no_applicability_check": false,
   "unversioned":            "include_flagged",
@@ -127,7 +127,7 @@ POST /scan
 }
 ```
 
-`unversioned` overrides `filters.unversioned_default` for this request only.
+`network`, `email`, and `webhook_url` are required. `unversioned` overrides `filters.unversioned_default` for this request only.
 
 ### CLI mode
 
@@ -139,18 +139,22 @@ python3 vuln-scanner.py <network> <email> [flags]
 
 ```bash
 # Basic scan
-python3 vuln-scanner.py 192.168.1.0/24 ops@example.com
+python3 vuln-scanner.py 192.168.1.0/24 ops@example.com \
+    --webhook-url http://n8n-host:5678/webhook/vuln-scanner
 
 # Skip patch check, verbose filter decisions
 python3 vuln-scanner.py 192.168.1.0/24 ops@example.com \
+    --webhook-url http://n8n-host:5678/webhook/vuln-scanner \
     --no-patch-check --verbose
 
 # Custom config and output directory
 python3 vuln-scanner.py 10.0.0.0/16 ops@example.com \
+    --webhook-url http://n8n-host:5678/webhook/vuln-scanner \
     --config ~/my-config.toml --output /tmp/scans
 
 # Exclude CVEs where the running version cannot be confirmed
 python3 vuln-scanner.py 192.168.1.0/24 ops@example.com \
+    --webhook-url http://n8n-host:5678/webhook/vuln-scanner \
     --unversioned exclude
 ```
 
@@ -160,6 +164,7 @@ python3 vuln-scanner.py 192.168.1.0/24 ops@example.com \
 |---|---|---|
 | `--config PATH` | — | Load config from this path |
 | `--output PATH` | `paths.scan_output_dir` | Override output base directory |
+| `--webhook-url URL` | — | **Required.** URL to POST scan results to on completion |
 | `--no-patch-check` | — | Skip Filter 3 (patch status lookup) |
 | `--no-applicability-check` | — | Skip Filter 4 (NVD version range check) |
 | `--unversioned include\|exclude` | `filters.unversioned_default` | Override unversioned CVE handling |
