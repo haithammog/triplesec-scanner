@@ -48,6 +48,46 @@ sudo nmap --script-updatedb
 
 ---
 
+## Quick Setup on a New Server
+
+Clone the repo and run the steps below. Tested on Ubuntu 24.04.
+
+```bash
+# 1. Clone
+git clone git@github.com:haithammog/triplesec-scanner.git
+cd triplesec-scanner
+
+# 2. Install Python dependencies
+pip install -r requirements.txt
+
+# 3. Install system dependencies
+sudo apt install -y nmap
+
+# 4. Install the vulners nmap script
+sudo git clone https://github.com/vulnersCom/nmap-vulners \
+    /usr/share/nmap/scripts/vulners
+sudo nmap --script-updatedb
+
+# 5. Copy the scanner and config
+sudo cp vuln-scanner.py /usr/local/bin/vuln-scanner.py
+sudo chmod +x /usr/local/bin/vuln-scanner.py
+sudo mkdir -p /etc/triplesec
+sudo cp config.toml /etc/triplesec/config.toml
+
+# 6. Edit the config — at minimum set webhook.url
+sudo nano /etc/triplesec/config.toml
+
+# 7. Install and start the systemd service
+sudo cp vuln-scanner.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now vuln-scanner
+
+# 8. Verify the service is up
+curl http://127.0.0.1:8888/health
+```
+
+---
+
 ## Installation
 
 ```bash
