@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Scanner runtime output (may contain sensitive scan data)
+/var/lib/vuln-scanner/
+scan_output/
+
+# Patch status cache
+patch_cache/
+.triplesec/patch_cache/
+
+# Scan state (previous-run CVE sets)
+scan_state/
+.triplesec/scan_state/
+
+# Logs
+*.log
+
+# Local config overrides — keep config.toml (template), ignore local secrets
+config.local.toml
+config.prod.toml
+secrets.toml
+*.secret.toml
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo

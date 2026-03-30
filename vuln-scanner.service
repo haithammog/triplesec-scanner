@@ -1,0 +1,21 @@
+[Unit]
+Description=TripleSec Network Vulnerability Scanner
+Documentation=https://github.com/vulnersCom/nmap-vulners
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/vuln-scanner.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONUNBUFFERED=1
+
+# Run as root so nmap can perform OS detection (-O requires raw socket access).
+# If you run without -O, drop privileges to a dedicated service user instead.
+User=root
+
+[Install]
+WantedBy=multi-user.target

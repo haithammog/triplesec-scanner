@@ -1,0 +1,173 @@
+# =============================================================================
+# TripleSec Vulnerability Scanner — Configuration File
+# =============================================================================
+# All paths, URLs, thresholds, commands, and timeouts are defined here.
+# No values are hardcoded in the application. This file is the single source
+# of truth. The scanner validates every key at startup and exits immediately
+# if anything is missing or invalid.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# [paths] — Filesystem locations
+# All paths support ~ expansion. Directories are created automatically on first
+# run if they do not exist. The scanner process must have write access to all
+# directories below except install_path (read-only after deployment).
+# -----------------------------------------------------------------------------
+[paths]
+
+# Absolute path to the scanner script itself.
+install_path = "/usr/local/bin/vuln-scanner.py"
+
+# Root directory for scan output. Each scan run creates a timestamped
+# subdirectory containing raw.json, filtered.json, delta.json, report.pdf,
+# and report.html.
+scan_output_dir = "/var/lib/vuln-scanner"
+
+# Directory for OS patch status cache files. One JSON file per CVE/OS-slug
+# pair, named {CVE-ID}_{os-slug}.json (e.g. CVE-2024-1234_ubuntu-noble.json).
+# Files older than filters.patch_cache_ttl seconds are re-fetched automatically.
+patch_cache_dir = "~/.triplesec/patch_cache"
+
+# Directory for scan delta state files. One JSON file per target network,
+# named by network slug (e.g. 91-221-69-0_24.json).
+scan_state_dir = "~/.triplesec/scan_state"
+
+# Path to the scanner's error log.
+error_log = "/var/lib/vuln-scanner/error.log"
+
+# Path to the vulners.nse nmap script.
+# Install from: https://github.com/vulnersCom/nmap-vulners
+nmap_script = "/usr/share/nmap/scripts/vulners.nse"
+
+# Name or absolute path of the nmap binary.
+nmap_binary = "nmap"
+
+
+# -----------------------------------------------------------------------------
+# [flask] — Flask HTTP service settings
+# -----------------------------------------------------------------------------
+[flask]
+
+# IP address the Flask service binds to.
+host = "127.0.0.1"
+
+# TCP port the Flask service listens on (1024–65535).
+port = 8888
+
+# Version string returned in the /health endpoint response.
+version = "3"
+
+
+# -----------------------------------------------------------------------------
+# [webhook] — n8n webhook integration
+# The scanner POSTs scan results here on completion. n8n reads the payload,
+# attaches report files, and sends the email. The scanner never sends email.
+# -----------------------------------------------------------------------------
+[webhook]
+
+url = "http://localhost:5678/webhook/vuln-scanner"
+
+
+# -----------------------------------------------------------------------------
+# [filters] — Post-processing filter thresholds
+# Applied in order to every CVE discovered by nmap.
+# A CVE must pass all active filters to appear in the actionable report.
+# -----------------------------------------------------------------------------
+[filters]
+
+# Filter 1 — Minimum CVSS base score (v3.1 preferred; v4.0 as fallback).
+# Valid range: 0.0–10.0.
+cvss_min_score = 7.0
+
+# Filter 2 — Minimum EPSS score (exploit prediction probability).
+# Valid range: 0.0–1.0.  0.10 = at least 10% real-world exploit probability.
+epss_min_score = 0.10
+
+# Filter 3 — Patch status cache TTL in seconds (default: 86400 = 24 hours).
+patch_cache_ttl = 86400
+
+# Filter 4 — Behaviour when nmap cannot detect a service version.
+# "include_flagged" — include, mark with ⚠️ version_unconfirmed
+# "exclude"         — silently exclude
+unversioned_default = "include_flagged"
+
+
+# -----------------------------------------------------------------------------
+# [nmap] — nmap invocation settings
+# -----------------------------------------------------------------------------
+[nmap]
+
+# Full nmap command template. Required placeholders:
+#   {nmap_binary}  resolved from paths.nmap_binary
+#   {script}       resolved from paths.nmap_script
+#   {target}       the network CIDR passed at scan time
+command = "{nmap_binary} -sV -O --script {script} {target} -oX -"
+
+# The OS detection flag included in the nmap command.
+os_detection_flag = "-O"
+
+
+# -----------------------------------------------------------------------------
+# [apis] — External API URL templates
+# Placeholders {cve_id} and {year} are substituted at runtime.
+# -----------------------------------------------------------------------------
+[apis]
+
+# NVD — CVSS scores and CPE version ranges.
+nvd_cve_url = "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve_id}"
+
+# EPSS — exploit prediction probability.
+epss_url = "https://api.first.org/data/v1/epss?cve={cve_id}"
+
+# Ubuntu Security Notices — patch status per CVE per Ubuntu codename.
+ubuntu_usn_url = "https://ubuntu.com/security/cves/{cve_id}.json"
+
+# Debian Security Tracker — bulk JSON dataset (fetched once per process run).
+debian_tracker_url = "https://security-tracker.debian.org/tracker/data/json"
+
+# Red Hat Security Data API — covers RHEL, CentOS, AlmaLinux, Rocky Linux.
+redhat_cve_url = "https://access.redhat.com/labs/securitydataapi/cve/{cve_id}.json"
+
+# Microsoft Security Response Center — CVRF feed by year.
+msrc_url = "https://api.msrc.microsoft.com/cvrf/v2.0/updates/{year}"
+
+
+# -----------------------------------------------------------------------------
+# [api_timeouts] — Per-source HTTP request timeout in seconds
+# -----------------------------------------------------------------------------
+[api_timeouts]
+
+nvd    = 10
+epss   = 10
+ubuntu = 10
+debian = 30   # Bulk JSON download — larger payload
+redhat = 10
+msrc   = 15   # CVRF XML can be large
+
+
+# -----------------------------------------------------------------------------
+# [report] — Severity colour-coding thresholds
+# -----------------------------------------------------------------------------
+[report]
+
+# CVSS score at or above which a CVE is Critical (red).
+critical_min = 9.0
+
+# CVSS score at or above which a CVE is High (orange).
+# CVEs between high_min and critical_min are shown as High.
+# CVEs below high_min that passed Filter 1 are shown as Medium.
+high_min = 7.0
+
+
+# -----------------------------------------------------------------------------
+# [os_patterns] — OS fingerprint classification rules (case-insensitive regex)
+# Evaluated in order; first match wins. Add new entries to support additional
+# OS families without code changes.
+# -----------------------------------------------------------------------------
+[os_patterns]
+
+ubuntu  = "(?i)ubuntu"
+debian  = "(?i)debian"
+rhel    = "(?i)(red hat|centos|almalinux|rocky)"
+windows = "(?i)windows"

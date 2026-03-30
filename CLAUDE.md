@@ -21,6 +21,19 @@ It decides whether the change is architecturally meaningful and updates the rele
 4. Make the change
 5. The hook handles the rest
 
+## Keeping README.md Up to Date
+Update `README.md` whenever a change affects any of the following:
+- CLI flags (added, removed, or renamed)
+- API endpoints or request/response shape
+- Filter pipeline (new filter, changed threshold behaviour, changed default)
+- Config keys (new section, renamed key, new placeholder)
+- Scan output files or their contents
+- Webhook payload fields
+- Python or system dependencies
+- Installation steps
+
+**How to update:** read only the affected section(s) of `README.md`, then edit those sections in place. Do not rewrite unaffected sections. Do not reformat or re-order sections that haven't changed.
+
 ## Constraints
 - Never read files not referenced in ARCHITECTURE.md unless strictly necessary
 - Never read entire files when a line range is given
