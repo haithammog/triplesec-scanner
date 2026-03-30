@@ -22,32 +22,6 @@ Operates as a persistent **Flask HTTP service** (called by n8n on a schedule) an
 
 ---
 
-## Requirements
-
-### Python dependencies
-
-```bash
-pip install flask python-nmap reportlab matplotlib requests pillow packaging tomli
-```
-
-> `tomllib` is built into Python 3.11+. For older versions, `tomli` is used as a drop-in.
-
-### System dependencies (Ubuntu 24.04)
-
-```bash
-sudo apt install nmap
-```
-
-### nmap vulners script
-
-```bash
-sudo git clone https://github.com/vulnersCom/nmap-vulners \
-    /usr/share/nmap/scripts/vulners
-sudo nmap --script-updatedb
-```
-
----
-
 ## Quick Setup on a New Server
 
 Clone the repo and run the steps below. Tested on Ubuntu 24.04.
@@ -84,31 +58,6 @@ sudo systemctl enable --now vuln-scanner
 
 # 8. Verify the service is up
 curl http://127.0.0.1:8888/health
-```
-
----
-
-## Installation
-
-```bash
-# 1. Copy the scanner
-sudo cp vuln-scanner.py /usr/local/bin/vuln-scanner.py
-sudo chmod +x /usr/local/bin/vuln-scanner.py
-
-# 2. Create the config directory and copy the config
-sudo mkdir -p /etc/triplesec
-sudo cp config.toml /etc/triplesec/config.toml
-
-# 3. Edit the config — set your webhook URL and adjust thresholds
-sudo nano /etc/triplesec/config.toml
-
-# 4. Create the output directory
-sudo mkdir -p /var/lib/vuln-scanner
-
-# 5. (Optional) Install as a systemd service
-sudo cp vuln-scanner.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now vuln-scanner
 ```
 
 ---
